@@ -1,11 +1,16 @@
 //load modules
 var fs = require('fs'),
     hashmap = require('hashmap').HashMap,
-    map = new hashmap();
+    map = new hashmap(),
+    exec = require('child_process').exec;
 
 //env setting
 var dataStorePATH = './jsonStore.json',
+    testJsonData = undefined,
     rawJsonData = undefined;
+
+// time measurement
+var hrstart, hrend;
 
 //example json data
 //[
@@ -28,13 +33,13 @@ var loadStorage = function () {
         console.log('\n//////////////\nstart load');
         //read file and convert data to hashmap
         var data = fs.readFileSync(dataStorePATH, 'utf8');
-
         rawJsonData = JSON.parse(data);
         rawJsonData.forEach(function (obj) {
             convertData(obj, null);
         });
+
         console.log('finish load\n//////////////\n');
-    }
+    };
 };
 
 //convert data to hashmap structure
@@ -67,17 +72,48 @@ var insert = function (obj) {
     convertData(obj, function () {
         rawJsonData.push(obj);
         fs.writeFileSync('jsonStore.json', JSON.stringify(rawJsonData));
-        console.log('insert finished');
     });
+};
+
+//test function
+var test = function (testName, testFunction) {
+    hrstart = process.hrtime();
+    if (testFunction) {
+        testFunction();
+    };
+    hrend = process.hrtime(hrstart);
+
+    console.info(testName + " Execution time : %ds %dms\n", hrend[0], hrend[1]/1000000);
 };
 
 //////////////////////////////////////////
 
-//load json data file
-loadStorage();
+// test load 100000 data
+test("Load 100000 Data", loadStorage);
 
-console.log(select(99999));
+// test select 1 row
+test("Select 1 Row", function () {
+    console.log(select(1122));
+});
 
-insert({"personalNum": 100003, "name": "Alice Patterson", "phoneNum": "4-(881)988-3412"});
+// test insert 1 data
+test("Insert 1 Data", function () {
+    insert({"personalNum": 100003, "name": "Alice Patterson", "phoneNum": "4-(881)988-3412"});
+});
 
-console.log(select(100002));
+// test select 1 row
+test("Select 1 Row", function () {
+    console.log(select(100003));
+});
+
+// clear hash map
+map.clear();
+testJsonData = rawJsonData;
+rawJsonData = [];
+
+// test insert 100000 data
+test("Insert 100000 Data", function () {
+    testJsonData.forEach(function (obj) {
+        insert(obj);
+    });
+});
